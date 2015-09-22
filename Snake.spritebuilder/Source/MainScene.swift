@@ -6,37 +6,49 @@ enum newPosition {
 
 class MainScene: CCNode {
     
-    var pieceArray: [Piece] = []
+    var snakePiece: CCNode!
+    
+    var swipeUp: UISwipeGestureRecognizer!
+    var swipeDown: UISwipeGestureRecognizer!
+    var swipeLeft: UISwipeGestureRecognizer!
+    var swipeRight: UISwipeGestureRecognizer!
+    
+    var detectedCollision: Bool = false
+    var targetPieceWasAdded: Bool = false
+    let newTargetPiece = CCBReader.load("targetPiece")
+    var pieceArray: [CCNode] = []
     var screenWidthPercent = CCDirector.sharedDirector().viewSize().width / 100
     var screenHeightPercent = CCDirector.sharedDirector().viewSize().height / 100
     
     var direction: newPosition = .Right
     
     func didLoadFromCCB() {
-        println("Loaded")
+        userInteractionEnabled = true
+        setupSwipeGestures()
         createInitialPiece()
-        schedule("makeSnakeMove", interval: 0.1)
+        spawnTargetPiece()
+        schedule("makeSnakeMove", interval: 0.09)
     }
     
     func createInitialPiece() {
-        let firstSnake = CCBReader.load("Piece") as! Piece
-        firstSnake.position = ccp(160, 300)
-        pieceArray.append(firstSnake)
-        addChild(firstSnake)
+        let snakePiece = CCBReader.load("Piece")
+        snakePiece.position = ccp(160, 300)
+        pieceArray.append(snakePiece)
+        addChild(snakePiece)
     }
     
     func makeSnakeMove() {
-        var lastPiece: Piece = pieceArray[pieceArray.count - 1]
-        var firstPiece: Piece = pieceArray[0]
+        var lastPiece: CCNode = pieceArray[pieceArray.count - 1]
+        var firstPiece: CCNode = pieceArray[0]
         var firstPiecesPosition = firstPiece.position
         var newPosition = newXandYalues(firstPiecesPosition)
         var newPiece = CCBReader.load("Piece") as! Piece
         newPiece.position = newPosition
         
         removeChild(lastPiece)
-        pieceArray.removeAtIndex(pieceArray.count - 1)
+        pieceArray.removeAtIndex(find(pieceArray, lastPiece)!)
         addChild(newPiece)
-        pieceArray.append(newPiece)
+        pieceArray.insert(newPiece, atIndex: 0)
         
     }
     
@@ -45,19 +57,83 @@ class MainScene: CCNode {
         
         switch direction {
         case .Up:
-            newPosition = ccp(point.x, point.y + screenHeightPercent * 2.5)
+            newPosition = ccp(point.x, point.y + 15)
         case .Down:
-            newPosition = ccp(point.x, point.y - screenHeightPercent * 2.5)
+            newPosition = ccp(point.x, point.y - 15)
         case .Left:
-            newPosition = ccp(point.x - screenWidthPercent * 5, point.y)
+            newPosition = ccp(point.x - 15, point.y)
         case .Right:
-            newPosition = ccp(point.x + screenWidthPercent * 5, point.y)
+            newPosition = ccp(point.x + 15, point.y)
         }
         return newPosition
     }
     
     func setupSwipeGestures() {
+        swipeUp = UISwipeGestureRecognizer(target: self, action: "up")
+        swipeUp.direction = .Up
+        CCDirector.sharedDirector().view.addGestureRecognizer(swipeUp)
         
+        swipeDown = UISwipeGestureRecognizer(target: self, action: "down")
+        swipeDown.direction = .Down
+        CCDirector.sharedDirector().view.addGestureRecognizer(swipeDown)
+        
+        swipeLeft = UISwipeGestureRecognizer(target: self, action: "left")
+        swipeLeft.direction = .Left
+        CCDirector.sharedDirector().view.addGestureRecognizer(swipeLeft)
+        
+        swipeRight = UISwipeGestureRecognizer(target: self, action: "right")
+        swipeRight.direction = .Right
+        CCDirector.sharedDirector().view.addGestureRecognizer(swipeRight)
+    }
+    func up() {
+        if direction != .Down {
+            direction = .Up
+        }
+    }
+    func down() {
+        if direction != .Up {
+            direction = .Down
+        }
+    }
+    func left() {
+        if direction != .Right {
+            direction = .Left
+        }
+    }
+    func right() {
+        if direction != .Left {
+            direction = .Right
+        }
+    }
+    
+    func spawnTargetPiece() {
+        let randomX = arc4random_uniform(UInt32(CCDirector.sharedDirector().viewSize().width))
+        let randomY = arc4random_uniform(UInt32(CCDirector.sharedDirector().viewSize().height))
+        
+        newTargetPiece.position = ccp(CGFloat(randomX), CGFloat(randomY))
+        if !targetPieceWasAdded {
+            addChild(newTargetPiece)
+            targetPieceWasAdded = true
+        }
+        detectedCollision = false
+    }
+    
+    func addSnakePiece() {
+        var newSnakePiece = CCBReader.load("Piece")
+        var frontPiece = pieceArray[0]
+        newSnakePiece.position = newXandYalues(frontPiece.position)
+        pieceArray.insert(newSnakePiece, atIndex: 0)
+        addChild(newSnakePiece)
+        detectedCollision = false
+    }
+    override func update(delta: CCTime) {
+        if CGRectIntersectsRect(pieceArray[0].boundingBox(), newTargetPiece.boundingBox()) {
+            if !detectedCollision {
+                detectedCollision = true
+                spawnTargetPiece()
+                addSnakePiece()
+            }
+        }
         
     }
     
