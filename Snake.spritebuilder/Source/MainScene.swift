@@ -30,6 +30,7 @@ class MainScene: CCNode {
         schedule("makeSnakeMove", interval: 0.09)
     }
     
+    
     func createInitialPiece() {
         let snakePiece = CCBReader.load("Piece")
         snakePiece.position = ccp(160, 300)
@@ -38,15 +39,15 @@ class MainScene: CCNode {
     }
     
     func makeSnakeMove() {
-        var lastPiece: CCNode = pieceArray[pieceArray.count - 1]
-        var firstPiece: CCNode = pieceArray[0]
-        var firstPiecesPosition = firstPiece.position
-        var newPosition = newXandYalues(firstPiecesPosition)
-        var newPiece = CCBReader.load("Piece") as! Piece
+        let lastPiece: CCNode = pieceArray[pieceArray.count - 1]
+        let firstPiece: CCNode = pieceArray[0]
+        let firstPiecesPosition = firstPiece.position
+        let newPosition = newXandYalues(firstPiecesPosition)
+        let newPiece = CCBReader.load("Piece") as! Piece
         newPiece.position = newPosition
         
         removeChild(lastPiece)
-        pieceArray.removeAtIndex(find(pieceArray, lastPiece)!)
+        pieceArray.removeAtIndex(pieceArray.indexOf(lastPiece)!)
         addChild(newPiece)
         pieceArray.insert(newPiece, atIndex: 0)
         
@@ -119,14 +120,14 @@ class MainScene: CCNode {
     }
     
     func addSnakePiece() {
-        var newSnakePiece = CCBReader.load("Piece")
-        var frontPiece = pieceArray[0]
+        let newSnakePiece = CCBReader.load("Piece")
+        let frontPiece = pieceArray[0]
         newSnakePiece.position = newXandYalues(frontPiece.position)
         pieceArray.insert(newSnakePiece, atIndex: 0)
         addChild(newSnakePiece)
         detectedCollision = false
     }
-    override func update(delta: CCTime) {
+    func checkForCollisionWithTarget() {
         if CGRectIntersectsRect(pieceArray[0].boundingBox(), newTargetPiece.boundingBox()) {
             if !detectedCollision {
                 detectedCollision = true
@@ -134,7 +135,19 @@ class MainScene: CCNode {
                 addSnakePiece()
             }
         }
-        
+    }
+    func checkForGameover() {
+        for piece in pieceArray {
+            if piece != pieceArray[0] {
+                if CGRectIntersectsRect(piece.boundingBox(), pieceArray[0].boundingBox()) {
+                    CCDirector.sharedDirector().presentScene(CCBReader.loadAsScene("MainScene"))
+                }
+            }
+        }
+    }
+    override func update(delta: CCTime) {
+        checkForCollisionWithTarget()
+        checkForGameover()
     }
     
 }
